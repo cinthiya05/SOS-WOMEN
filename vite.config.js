@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react'
 // Only apply base path when building for production
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: command === 'build' ? '/sos-women/' : '/', // ← fix here
+  base: command === 'build' ? '/SOS-WOMEN/' : '/', // ← fix here
 }))
