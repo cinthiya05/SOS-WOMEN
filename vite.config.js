@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+// Only apply base path when building for production
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/sos-women/',  // 👈 your GitHub repo name
-});
+  base: command === 'build' ? '/sos-women/' : '/', // ← fix here
+}))
