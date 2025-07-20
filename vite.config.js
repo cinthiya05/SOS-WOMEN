@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: command === '/SOS-WOMEN/' // 👈 dynamic base
+  base: '/SOS-WOMEN/' // 👈 dynamic base
 }));
