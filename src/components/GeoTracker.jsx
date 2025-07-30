@@ -2,15 +2,28 @@
 import React, { useState, useRef } from 'react';
 import { ref, set } from 'firebase/database';
 import { db } from '../firebase';
-import { FaExclamationTriangle } from 'react-icons/fa';
 import { v4 as uuidv4 } from 'uuid';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
+import {
+  Alert,
+  IconButton,
+  Button,
+  Box,
+  Paper,
+  Typography,
+  Stack
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const GeoTracker = () => {
   const [location, setLocation] = useState(null);
   const [tracking, setTracking] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
   const watchIdRef = useRef(null);
-  const userIdRef = useRef(uuidv4()); // persistent for session
+  const userIdRef = useRef(uuidv4());
+  const navigate = useNavigate();
 
   const handleSuccess = (pos) => {
     const coords = {
@@ -27,19 +40,26 @@ const GeoTracker = () => {
 
     set(ref(db, 'locations/' + userIdRef.current), fullData);
     console.log('📡 Data sent to Firebase:', fullData);
+
+    setShowAlert(true);
+    setTimeout(() => setShowAlert(false), 4000); // Hide alert after 4s
   };
 
   const handleError = (error) => {
-    console.error("Geolocation error:", error.message);
+    console.error('Geolocation error:', error.message);
   };
 
   const startTracking = () => {
     if (navigator.geolocation && !tracking) {
-      const id = navigator.geolocation.watchPosition(handleSuccess, handleError, {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 5000,
-      });
+      const id = navigator.geolocation.watchPosition(
+        handleSuccess,
+        handleError,
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 5000,
+        }
+      );
       watchIdRef.current = id;
       setTracking(true);
       console.log('🟢 SOS Tracking started');
@@ -56,137 +76,163 @@ const GeoTracker = () => {
   };
 
   return (
-    <div style={styles.bgContainer}>
-      <div style={styles.overlay}></div>
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <FaExclamationTriangle size={40} color="red" />
-          <h2 style={styles.heading}>AlertBuddy Geo Tracker</h2>
+    <Box
+      sx={{
+        position: 'relative',
+        minHeight: '100vh',
+        backgroundImage: 'url(/SOS-WOMEN/alert-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Dark Overlay */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          zIndex: 1,
+        }}
+      />
 
-          {location ? (
-            <>
-              <p style={styles.text}><strong>Latitude:</strong> {location.lat}</p>
-              <p style={styles.text}><strong>Longitude:</strong> {location.lng}</p>
-            </>
-          ) : (
-            <p style={styles.textMuted}>Location not yet tracked</p>
+      {/* Card Container */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 'calc(100vh - 80px)',
+          px: 2,
+        }}
+      >
+        <Paper
+          elevation={5}
+          sx={{
+            width: '100%',
+            maxWidth: 380,
+            p: 3,
+            borderRadius: 3,
+            textAlign: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(12px)',
+            color: '#fff',
+            position: 'relative',
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            AlertBuddy Geo Tracker
+          </Typography>
+
+          {/* Alert Styled */}
+          {showAlert && (
+            <Alert
+              severity="error"
+              sx={{
+                position: 'absolute',
+                top: 5,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: '#b71c1c',
+                color: 'white',
+                fontWeight: 'bold',
+                width: '90%',
+              }}
+            >
+              Alert sent successfully with coordinates!
+            </Alert>
           )}
 
-          {lastUpdated && (
-            <p style={styles.timestamp}>
-              Last updated: {new Date(lastUpdated).toLocaleTimeString()}
-            </p>
-          )}
+          {/* Lat / Long Data */}
+          <Box sx={{ my: 3 }}>
+            {location ? (
+              <>
+                <Typography variant="body1" sx={{ color: '#eee' }}>
+                  <strong>Latitude:</strong> {location.lat}
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#eee' }}>
+                  <strong>Longitude:</strong> {location.lng}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#ccc' }}>
+                Location not yet tracked
+              </Typography>
+            )}
 
-          <div style={styles.buttonGroup}>
-            <button
-              onClick={startTracking}
-              style={{
-                ...styles.startBtn,
-                opacity: tracking ? 0.6 : 1,
-                cursor: tracking ? 'not-allowed' : 'pointer',
-              }}
-              disabled={tracking}
-            >
-              Start SOS
-            </button>
-            <button
-              onClick={stopTracking}
-              style={{
-                ...styles.stopBtn,
-                opacity: !tracking ? 0.6 : 1,
-                cursor: !tracking ? 'not-allowed' : 'pointer',
-              }}
-              disabled={!tracking}
-            >
-              Stop
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            {lastUpdated && (
+              <Typography
+                variant="caption"
+                display="block"
+                sx={{ color: '#bbb', mt: 1 }}
+              >
+                Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Start / Stop Buttons */}
+          <Stack direction="row" justifyContent="center">
+            {!tracking ? (
+              <IconButton
+                onClick={startTracking}
+                sx={{
+                  width: 100,
+                  height: 100,
+                  backgroundColor: '#f70400ff',
+                  borderRadius: '50%',
+                  boxShadow: '0 0 25px rgba(255,0,0,0.6)',
+                }}
+              >
+                <MyLocationIcon sx={{ fontSize: 60, color: '#fff' }} />
+              </IconButton>
+            ) : (
+              <IconButton
+                onClick={stopTracking}
+                sx={{
+                  width: 100,
+                  height: 100,
+                  backgroundColor: '#555',
+                  borderRadius: '50%',
+                  boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+                }}
+              >
+                <StopCircleIcon sx={{ fontSize: 60, color: '#fff' }} />
+              </IconButton>
+            )}
+          </Stack>
+        </Paper>
+      </Box>
+
+      {/* Bottom Back Button */}
+      <Button
+        variant="outlined"
+        onClick={() => navigate(-1)}
+        sx={{
+          position: 'fixed',
+          bottom: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '90%',
+          borderColor: '#d32f2f',
+          color: '#ffffff',
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          '&:hover': {
+            backgroundColor: '#d32f2f',
+            color: '#fff',
+          },
+          zIndex: 3,
+        }}
+      >
+        ⬅ Back
+      </Button>
+    </Box>
   );
-};
-
-const styles = {
-  bgContainer: {
-    position: 'relative',
-    minHeight: '100vh',
-    backgroundImage: 'url(/SOS-WOMEN/alert-bg.jpg)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    zIndex: 1,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 2,
-  },
-  container: {
-    position: 'relative',
-    zIndex: 3,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    padding: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(12px)',
-    borderRadius: 12,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-    textAlign: 'center',
-    color: '#fff',
-  },
-  heading: {
-    margin: '12px 0 18px',
-    color: '#fff',
-  },
-  text: {
-    color: '#eee',
-  },
-  textMuted: {
-    color: '#ccc',
-  },
-  timestamp: {
-    fontSize: '0.85rem',
-    color: '#bbb',
-    marginTop: 10,
-  },
-  buttonGroup: {
-    marginTop: 20,
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  startBtn: {
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#e53935',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 6,
-    fontWeight: 'bold',
-  },
-  stopBtn: {
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#bbb',
-    color: '#000',
-    border: 'none',
-    borderRadius: 6,
-    fontWeight: 'bold',
-  },
 };
 
 export default GeoTracker;

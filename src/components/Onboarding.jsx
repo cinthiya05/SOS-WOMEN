@@ -8,9 +8,13 @@ import {
   Paper,
   Grid,
   IconButton,
+  Button
 } from '@mui/material';
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import EmergencyIcon from '@mui/icons-material/Warning';
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -33,7 +37,32 @@ const Onboarding = () => {
 
   const handleFinish = () => {
     localStorage.setItem('userInfo', JSON.stringify(form));
-    navigate('/geotracker');
+    setStep(3); // Move to new menu screen
+  };
+
+  // Common style for all TextFields
+  const textFieldStyles = {
+    '& .MuiInputBase-root': {
+      backgroundColor: 'rgba(151, 9, 9, 0.85)',
+      borderRadius: '6px',
+    },
+    '& .MuiInputLabel-root': {
+      color: '#fff',
+      textShadow: '1px 1px 4px rgba(0,0,0,0.8)',
+    },
+    '& input::placeholder': {
+      color: '#444',
+      textShadow: '1px 1px 4px rgba(224, 0, 0, 0.6)',
+    },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: 'transparent',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#d32f2f',
+        boxShadow: '0 0 6px rgba(211, 47, 47, 0.6)',
+      },
+    },
   };
 
   return (
@@ -76,6 +105,7 @@ const Onboarding = () => {
           textAlign: 'center',
         }}
       >
+        {/* Step 0 */}
         {step === 0 && (
           <>
             <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
@@ -109,6 +139,7 @@ const Onboarding = () => {
           </>
         )}
 
+        {/* Step 1 */}
         {step === 1 && (
           <>
             <Typography variant="h6" gutterBottom color="white">
@@ -121,15 +152,7 @@ const Onboarding = () => {
               value={form.name}
               onChange={handleChange}
               margin="normal"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
             <TextField
               label="Email"
@@ -139,15 +162,7 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               type="email"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
             <TextField
               label="Phone"
@@ -157,31 +172,23 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               type="tel"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
-            <Grid container spacing={2} mt={2}>
-              <Grid item xs={6}>
-                <button onClick={prevStep} style={buttonStyle('outlined')}>
-                  Back
+            <Grid container spacing={2} mt={2} justifyContent="flex-end">
+            <Grid item>
+                <button 
+                onClick={step === 1 ? nextStep : handleFinish} 
+                style={buttonStyle('contained')}
+                >
+                {step === 1 ? 'Next' : 'Finish'}
                 </button>
-              </Grid>
-              <Grid item xs={6}>
-                <button onClick={nextStep} style={buttonStyle('contained')}>
-                  Next
-                </button>
-              </Grid>
             </Grid>
+            </Grid>
+
           </>
         )}
 
+        {/* Step 2 */}
         {step === 2 && (
           <>
             <Typography variant="h6" gutterBottom color="white">
@@ -195,15 +202,7 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               type="tel"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
             <TextField
               label="Emergency Contact 2"
@@ -213,15 +212,7 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               type="tel"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
             <TextField
               label="Address"
@@ -230,45 +221,119 @@ const Onboarding = () => {
               value={form.address}
               onChange={handleChange}
               margin="normal"
-              sx={{
-    input: { backgroundColor: 'white' },
-    '& .MuiInputBase-root': {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-    },
-    '&.Mui-focused .MuiInputBase-root': {
-      backgroundColor: 'white',
-    },
-  }}
+              sx={textFieldStyles}
             />
-            <Grid container spacing={2} mt={2}>
-              <Grid item xs={6}>
-                <button onClick={prevStep} style={buttonStyle('outlined')}>
-                  Back
+            <Grid container spacing={2} mt={2} justifyContent="flex-end">
+            <Grid item>
+                <button 
+                onClick={step === 1 ? nextStep : handleFinish} 
+                style={buttonStyle('contained')}
+                >
+                {step === 1 ? 'Next' : 'Finish'}
                 </button>
-              </Grid>
-              <Grid item xs={6}>
-                <button onClick={handleFinish} style={buttonStyle('contained')}>
-                  Finish
-                </button>
-              </Grid>
             </Grid>
+            </Grid>
+
           </>
         )}
+
+        {/* Step 3 - Action Menu */}
+        {step === 3 && (
+        <>
+            <Typography variant="h6" gutterBottom color="white" mb={3}>
+            Choose an Option
+            </Typography>
+            <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
+            <Box textAlign="center">
+                <IconButton
+                sx={iconButtonStyle}
+                onClick={() => navigate('/detect')}
+                >
+                <PhotoCameraIcon sx={{ fontSize: 40 }} />
+                </IconButton>
+                <Typography color="white" variant="subtitle2">
+                Image Detection
+                </Typography>
+            </Box>
+            <Box textAlign="center">
+                <IconButton
+                sx={iconButtonStyle}
+                onClick={() => navigate('/voice')}
+                >
+                <KeyboardVoiceIcon sx={{ fontSize: 40 }} />
+                </IconButton>
+                <Typography color="white" variant="subtitle2">
+                Voice Detection
+                </Typography>
+            </Box>
+            <Box textAlign="center">
+                <IconButton
+                sx={iconButtonStyle}
+                onClick={() => navigate('/geotracker')}
+                >
+                <EmergencyIcon sx={{ fontSize: 40 }} />
+                </IconButton>
+                <Typography color="white" variant="subtitle2">
+                SOS Button
+                </Typography>
+            </Box>
+            </Box>
+        </>
+        )}
       </Paper>
+            {/* Fixed Bottom Back Button for Steps > 0 */}
+            {step > 0 && (
+            <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => setStep((prev) => prev - 1)}
+                sx={{
+                position: "fixed",
+                bottom: 20,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "90%",
+                borderColor: "#d32f2f",
+                color: "#ffffff",
+                backgroundColor: "rgba(255,255,255,0.1)",
+                "&:hover": {
+                    backgroundColor: "#cc0000",
+                    color: "#fff",
+                },
+                zIndex: 5,
+                }}
+            >
+                ⬅ Back
+            </Button>
+            )}
+
     </Box>
+    
   );
 };
 
-// 🔧 Custom inline button styles
+// Custom inline button styles
 const buttonStyle = (variant) => ({
   width: '100%',
   padding: '10px',
-  backgroundColor: variant === 'contained' ? '#d32f2f' : 'transparent',
+  backgroundColor: variant === 'contained' ? '#cc0000' : 'transparent',
   color: variant === 'contained' ? '#fff' : '#d32f2f',
   border: variant === 'outlined' ? '2px solid #d32f2f' : 'none',
   borderRadius: '6px',
   fontWeight: 'bold',
   cursor: 'pointer',
 });
+
+const iconButtonStyle = {
+  width: 80,
+  height: 80,
+  backgroundColor: 'rgba(255,255,255,0.1)',
+  color: '#fff',
+  borderRadius: '50%',
+  boxShadow: '0 0 15px rgba(255,0,0,0.6)',
+  '&:hover': {
+    backgroundColor: '#cc0000',
+  },
+};
 
 export default Onboarding;
