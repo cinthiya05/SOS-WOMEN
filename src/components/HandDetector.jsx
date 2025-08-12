@@ -12,6 +12,9 @@ import {
   Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { ref, set } from 'firebase/database';
+import { db } from '../firebase';
+import { v4 as uuidv4 } from 'uuid';
 
 const theme = createTheme({
   palette: {
@@ -44,6 +47,37 @@ const HandDetector = () => {
   const [helpVisible, setHelpVisible] = useState(false);
   const lastPingTimeRef = useRef(0);
   const navigate = useNavigate();
+
+  // Location tracking refs
+  const userIdRef = useRef(uuidv4());
+
+  const sendLocationToFirebase = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+          };
+
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+          const fullData = { ...coords, ...userInfo ,  sosType: 'SOS-hand-detector' };
+
+          set(ref(db, 'locations/' + userIdRef.current), fullData);
+          console.log('📡 Data sent to Firebase:', fullData);
+        },
+        (err) => {
+          console.error('Geolocation error:', err.message);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 5000,
+        }
+      );
+    }
+  };
 
   useEffect(() => {
     const hands = new Hands({
@@ -93,7 +127,8 @@ const HandDetector = () => {
 
             const now = Date.now();
             if (now - lastPingTimeRef.current > 5000) {
-              console.log('HELP: Notification ping sent');
+              sendLocationToFirebase();
+              console.log('📍 Location pinged to Firebase');
               lastPingTimeRef.current = now;
             }
           }
@@ -209,7 +244,7 @@ const HandDetector = () => {
           </Button>
         </Paper>
 
-        {/* Back Button at bottom */}
+        {/* Back Button */}
         <Button
           variant="outlined"
           color="primary"

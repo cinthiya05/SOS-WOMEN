@@ -36,7 +36,7 @@ const GeoTracker = () => {
     setLastUpdated(coords.timestamp);
 
     const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-    const fullData = { ...coords, ...userInfo };
+    const fullData = { ...coords, ...userInfo,  sosType: 'SOS-Button'  };
 
     set(ref(db, 'locations/' + userIdRef.current), fullData);
     console.log('📡 Data sent to Firebase:', fullData);

@@ -28,6 +28,8 @@ const Onboarding = () => {
     address: '',
   });
 
+  const [errors, setErrors] = useState({});
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -35,9 +37,34 @@ const Onboarding = () => {
   const nextStep = () => setStep((prev) => prev + 1);
   const prevStep = () => setStep((prev) => prev - 1);
 
+  // Validate fields for the current step
+  const validateStep = () => {
+    let newErrors = {};
+    if (step === 1) {
+      if (!form.name) newErrors.name = 'Name is required';
+      if (!form.email) newErrors.email = 'Email is required';
+      if (!form.contact) newErrors.contact = 'Phone is required';
+    }
+    if (step === 2) {
+      if (!form.emergency1) newErrors.emergency1 = 'Emergency Contact 1 is required';
+      if (!form.emergency2) newErrors.emergency2 = 'Emergency Contact 2 is required';
+      if (!form.address) newErrors.address = 'Address is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) {
+      nextStep();
+    }
+  };
+
   const handleFinish = () => {
-    localStorage.setItem('userInfo', JSON.stringify(form));
-    setStep(3); // Move to new menu screen
+    if (validateStep()) {
+      localStorage.setItem('userInfo', JSON.stringify(form));
+      setStep(3); // Move to menu screen
+    }
   };
 
   // Common style for all TextFields
@@ -45,14 +72,11 @@ const Onboarding = () => {
     '& .MuiInputBase-root': {
       backgroundColor: 'rgba(151, 9, 9, 0.85)',
       borderRadius: '6px',
+      color: '#fff'
     },
     '& .MuiInputLabel-root': {
       color: '#fff',
       textShadow: '1px 1px 4px rgba(0,0,0,0.8)',
-    },
-    '& input::placeholder': {
-      color: '#444',
-      textShadow: '1px 1px 4px rgba(224, 0, 0, 0.6)',
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
@@ -153,6 +177,8 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               sx={textFieldStyles}
+              error={!!errors.name}
+              helperText={errors.name}
             />
             <TextField
               label="Email"
@@ -163,6 +189,8 @@ const Onboarding = () => {
               margin="normal"
               type="email"
               sx={textFieldStyles}
+              error={!!errors.email}
+              helperText={errors.email}
             />
             <TextField
               label="Phone"
@@ -173,18 +201,19 @@ const Onboarding = () => {
               margin="normal"
               type="tel"
               sx={textFieldStyles}
+              error={!!errors.contact}
+              helperText={errors.contact}
             />
             <Grid container spacing={2} mt={2} justifyContent="flex-end">
-            <Grid item>
-                <button 
-                onClick={step === 1 ? nextStep : handleFinish} 
-                style={buttonStyle('contained')}
+              <Grid item>
+                <button
+                  onClick={handleNext}
+                  style={buttonStyle('contained')}
                 >
-                {step === 1 ? 'Next' : 'Finish'}
+                  Next
                 </button>
+              </Grid>
             </Grid>
-            </Grid>
-
           </>
         )}
 
@@ -203,6 +232,8 @@ const Onboarding = () => {
               margin="normal"
               type="tel"
               sx={textFieldStyles}
+              error={!!errors.emergency1}
+              helperText={errors.emergency1}
             />
             <TextField
               label="Emergency Contact 2"
@@ -213,6 +244,8 @@ const Onboarding = () => {
               margin="normal"
               type="tel"
               sx={textFieldStyles}
+              error={!!errors.emergency2}
+              helperText={errors.emergency2}
             />
             <TextField
               label="Address"
@@ -222,93 +255,93 @@ const Onboarding = () => {
               onChange={handleChange}
               margin="normal"
               sx={textFieldStyles}
+              error={!!errors.address}
+              helperText={errors.address}
             />
             <Grid container spacing={2} mt={2} justifyContent="flex-end">
-            <Grid item>
-                <button 
-                onClick={step === 1 ? nextStep : handleFinish} 
-                style={buttonStyle('contained')}
+              <Grid item>
+                <button
+                  onClick={handleFinish}
+                  style={buttonStyle('contained')}
                 >
-                {step === 1 ? 'Next' : 'Finish'}
+                  Finish
                 </button>
+              </Grid>
             </Grid>
-            </Grid>
-
           </>
         )}
 
         {/* Step 3 - Action Menu */}
         {step === 3 && (
-        <>
+          <>
             <Typography variant="h6" gutterBottom color="white" mb={3}>
-            Choose an Option
+              Choose an Option
             </Typography>
             <Box display="flex" flexDirection="column" alignItems="center" gap={3}>
-            <Box textAlign="center">
+              <Box textAlign="center">
                 <IconButton
-                sx={iconButtonStyle}
-                onClick={() => navigate('/detect')}
+                  sx={iconButtonStyle}
+                  onClick={() => navigate('/detect')}
                 >
-                <PhotoCameraIcon sx={{ fontSize: 40 }} />
+                  <PhotoCameraIcon sx={{ fontSize: 40 }} />
                 </IconButton>
                 <Typography color="white" variant="subtitle2">
-                Image Detection
+                  Image Detection
                 </Typography>
-            </Box>
-            <Box textAlign="center">
+              </Box>
+              <Box textAlign="center">
                 <IconButton
-                sx={iconButtonStyle}
-                onClick={() => navigate('/voice')}
+                  sx={iconButtonStyle}
+                  onClick={() => navigate('/voice')}
                 >
-                <KeyboardVoiceIcon sx={{ fontSize: 40 }} />
+                  <KeyboardVoiceIcon sx={{ fontSize: 40 }} />
                 </IconButton>
                 <Typography color="white" variant="subtitle2">
-                Voice Detection
+                  Voice Detection
                 </Typography>
-            </Box>
-            <Box textAlign="center">
+              </Box>
+              <Box textAlign="center">
                 <IconButton
-                sx={iconButtonStyle}
-                onClick={() => navigate('/geotracker')}
+                  sx={iconButtonStyle}
+                  onClick={() => navigate('/geotracker')}
                 >
-                <EmergencyIcon sx={{ fontSize: 40 }} />
+                  <EmergencyIcon sx={{ fontSize: 40 }} />
                 </IconButton>
                 <Typography color="white" variant="subtitle2">
-                SOS Button
+                  SOS Button
                 </Typography>
+              </Box>
             </Box>
-            </Box>
-        </>
+          </>
         )}
       </Paper>
-            {/* Fixed Bottom Back Button for Steps > 0 */}
-            {step > 0 && (
-            <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => setStep((prev) => prev - 1)}
-                sx={{
-                position: "fixed",
-                bottom: 20,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "90%",
-                borderColor: "#d32f2f",
-                color: "#ffffff",
-                backgroundColor: "rgba(255,255,255,0.1)",
-                "&:hover": {
-                    backgroundColor: "#cc0000",
-                    color: "#fff",
-                },
-                zIndex: 5,
-                }}
-            >
-                ⬅ Back
-            </Button>
-            )}
 
+      {/* Fixed Bottom Back Button for Steps > 0 */}
+      {step > 0 && step < 3 && (
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={prevStep}
+          sx={{
+            position: "fixed",
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "90%",
+            borderColor: "#d32f2f",
+            color: "#ffffff",
+            backgroundColor: "rgba(255,255,255,0.1)",
+            "&:hover": {
+              backgroundColor: "#cc0000",
+              color: "#fff",
+            },
+            zIndex: 5,
+          }}
+        >
+          ⬅ Back
+        </Button>
+      )}
     </Box>
-    
   );
 };
 
