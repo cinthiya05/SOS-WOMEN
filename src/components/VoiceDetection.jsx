@@ -41,6 +41,8 @@ const VoiceDetection = () => {
   const restartTimeoutRef = useRef(null);
   const sendIntervalRef = useRef(null);
   const navigate = useNavigate();
+  const lastVoiceRef = useRef(null); // 🆕 store latest voice
+
 
   const hasHelpKeyword = (text) => {
     if (!text) return false;
@@ -49,44 +51,87 @@ const VoiceDetection = () => {
     return keywords.some((k) => lower.includes(k));
   };
 
+  // 🎤 Record 5 seconds audio, convert to Base64 and send to Firebase
+ // 🎤 Record 5 seconds audio, convert to Base64 and send to Firebase
+// 🎤 Record 5 seconds audio and store latest Base64 in memory
+const recordVoice = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    let chunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Voice = reader.result; 
+        lastVoiceRef.current = base64Voice; // 🆕 keep the last voice
+        console.log("🎤 New voice recorded and stored");
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    mediaRecorder.start();
+    console.log("🎤 Recording started...");
+    setTimeout(() => {
+      mediaRecorder.stop();
+      stream.getTracks().forEach((track) => track.stop());
+      console.log("🎤 Recording stopped after 5s");
+    }, 5000);
+  } catch (err) {
+    console.error("Voice recording failed:", err);
+  }
+};
+
+
+
   const sendLocation = () => {
-    if (!helpActive) return;
+  if (!helpActive) return;
 
-    const now = Date.now();
-    if (now - lastPingTimeRef.current < 5000) return; // throttle 5s
-    lastPingTimeRef.current = now;
+  const now = Date.now();
+  if (now - lastPingTimeRef.current < 5000) return; // throttle 5s
+  lastPingTimeRef.current = now;
 
-    if (!navigator.geolocation) {
-      console.warn("Geolocation not available");
-      return;
-    }
+  if (!navigator.geolocation) {
+    console.warn("Geolocation not available");
+    return;
+  }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          timestamp: new Date().toISOString(),
-        };
-        const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-        const fullData = { ...coords, ...userInfo ,  sosType: 'SOS-Voice'  };
-        set(ref(db, "locations/" + userIdRef.current), fullData);
-        console.log("📡 Location sent:", fullData);
-      },
-      (err) => console.error("Geolocation error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
-    );
-  };
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const coords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        timestamp: new Date().toISOString(),
+      };
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+
+      // 🆕 Always attach lastVoice if available
+      const fullData = { 
+        ...coords, 
+        ...userInfo, 
+        sosType: "SOS-Voice",
+        voice: lastVoiceRef.current || null 
+      };
+
+      set(ref(db, "locations/" + userIdRef.current), fullData);
+      console.log("📡 Location sent:", fullData);
+    },
+    (err) => console.error("Geolocation error:", err.message),
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+  );
+};
+
 
   const startListening = async () => {
     if (!recognitionRef.current) return;
     try {
       isManuallyStopped.current = false;
-      // avoid double-start error
-      if (!listening) {
-        recognitionRef.current.start();
-        // onstart will set listening true
-      }
+      if (!listening) recognitionRef.current.start();
     } catch (e) {
       console.warn("startListening error:", e);
     }
@@ -100,12 +145,10 @@ const VoiceDetection = () => {
     } catch (e) {
       console.warn("stopListening error:", e);
     }
-    // Also clear help mode & interval
     setHelpActive(false);
     setHelpVisible(false);
   };
 
-  // Create SpeechRecognition once on mount
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -127,7 +170,6 @@ const VoiceDetection = () => {
     recognition.onend = () => {
       console.log("🎙 recognition ended");
       setListening(false);
-      // if user didn't manually stop, try a guarded restart to avoid tight loops
       if (!isManuallyStopped.current) {
         clearTimeout(restartTimeoutRef.current);
         restartTimeoutRef.current = setTimeout(() => {
@@ -136,13 +178,12 @@ const VoiceDetection = () => {
           } catch (e) {
             console.warn("restart failed:", e);
           }
-        }, 200); // short delay
+        }, 200);
       }
     };
 
     recognition.onerror = (event) => {
       console.error("recognition error:", event.error);
-      // For permission errors, don't restart
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         alert("Please allow microphone access and reload the page.");
         isManuallyStopped.current = true;
@@ -157,16 +198,16 @@ const VoiceDetection = () => {
       setTranscript(fullTranscript);
 
       if (hasHelpKeyword(fullTranscript)) {
-        // Activate help only once
         if (!helpActive) {
           console.log("🚨 HELP detected, activating SOS");
           setHelpActive(true);
           setHelpVisible(true);
-          // keep HELP visible for 3s (UI)
+
           clearTimeout(helpTimerRef.current);
           helpTimerRef.current = setTimeout(() => setHelpVisible(false), 3000);
+
+          recordVoice(); // 🎤 Start recording when help detected
         }
-        // send immediate location and the interval will take care of subsequent pings
         sendLocation();
       }
     };
@@ -174,20 +215,16 @@ const VoiceDetection = () => {
     recognitionRef.current = recognition;
 
     return () => {
-      // cleanup on unmount
       try {
         recognition.stop();
       } catch (e) {}
       clearTimeout(restartTimeoutRef.current);
       clearTimeout(helpTimerRef.current);
     };
-    // empty deps -> run once
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // run once
 
-  // When helpActive toggles, start/stop the 5s sending interval
   useEffect(() => {
     if (helpActive) {
-      // send immediately, then every 5s
       sendLocation();
       if (sendIntervalRef.current) clearInterval(sendIntervalRef.current);
       sendIntervalRef.current = setInterval(sendLocation, 5000);
@@ -197,30 +234,13 @@ const VoiceDetection = () => {
         sendIntervalRef.current = null;
       }
     }
-
     return () => {
-      // cleanup if effect re-runs/unmounts
       if (sendIntervalRef.current) {
         clearInterval(sendIntervalRef.current);
         sendIntervalRef.current = null;
       }
     };
-    // only when helpActive changes
   }, [helpActive]);
-
-  // Unmount cleanup: stop recognition and intervals
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-      if (sendIntervalRef.current) clearInterval(sendIntervalRef.current);
-      clearTimeout(helpTimerRef.current);
-      clearTimeout(restartTimeoutRef.current);
-    };
-  }, []);
 
   return (
     <ThemeProvider theme={theme}>
@@ -304,7 +324,7 @@ const VoiceDetection = () => {
                 fontWeight: "bold",
               }}
             >
-              HELP DETECTED! Sending location...
+              HELP DETECTED! Recording voice + sending location...
             </Alert>
           )}
 

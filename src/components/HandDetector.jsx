@@ -46,12 +46,36 @@ const HandDetector = () => {
   const [detecting, setDetecting] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const lastPingTimeRef = useRef(0);
+  const photosRef = useRef([]); // 🔥 global store for 3 photos
   const navigate = useNavigate();
 
   // Location tracking refs
   const userIdRef = useRef(uuidv4());
 
-  const sendLocationToFirebase = () => {
+  // Capture photo as base64
+  const capturePhoto = () => {
+    const hiddenCanvas = document.createElement("canvas");
+    hiddenCanvas.width = videoRef.current.videoWidth;
+    hiddenCanvas.height = videoRef.current.videoHeight;
+    const ctx = hiddenCanvas.getContext("2d");
+    ctx.drawImage(videoRef.current, 0, 0);
+    return hiddenCanvas.toDataURL("image/jpeg", 0.7);
+  };
+
+  // Take 3 photos and save them globally
+  const takePhotos = async () => {
+    let photos = [];
+    for (let i = 0; i < 3; i++) {
+      const photo = capturePhoto();
+      photos.push(photo);
+      await new Promise((res) => setTimeout(res, 500));
+    }
+    photosRef.current = photos; // 🔥 save globally
+    console.log("📷 Captured Photos:", photos);
+  };
+
+  // Send location + photos to Realtime DB
+  const sendLocationWithPhotos = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -61,20 +85,20 @@ const HandDetector = () => {
             timestamp: new Date().toISOString(),
           };
 
-          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-          const fullData = { ...coords, ...userInfo ,  sosType: 'SOS-hand-detector' };
+          const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
 
-          set(ref(db, 'locations/' + userIdRef.current), fullData);
-          console.log('📡 Data sent to Firebase:', fullData);
+          const fullData = {
+            ...coords,
+            ...userInfo,
+            sosType: "SOS-hand-detector",
+            photos: photosRef.current, // 🔥 always send latest 3 photos
+          };
+
+          set(ref(db, "locations/" + userIdRef.current), fullData);
+          console.log("📡 Data sent to Firebase:", fullData);
         },
-        (err) => {
-          console.error('Geolocation error:', err.message);
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 5000,
-        }
+        (err) => console.error("Geolocation error:", err.message),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
       );
     }
   };
@@ -93,7 +117,7 @@ const HandDetector = () => {
     });
 
     hands.onResults((results) => {
-      const canvasCtx = canvasRef.current.getContext('2d');
+      const canvasCtx = canvasRef.current.getContext("2d");
       canvasCtx.save();
       canvasCtx.clearRect(
         0,
@@ -114,11 +138,11 @@ const HandDetector = () => {
       if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
           drawConnectors(canvasCtx, landmarks, Hands.HAND_CONNECTIONS, {
-            color: '#00FF00',
+            color: "#00FF00",
             lineWidth: 2,
           });
           drawLandmarks(canvasCtx, landmarks, {
-            color: '#FF0000',
+            color: "#FF0000",
             lineWidth: 1,
           });
 
@@ -127,8 +151,15 @@ const HandDetector = () => {
 
             const now = Date.now();
             if (now - lastPingTimeRef.current > 5000) {
-              sendLocationToFirebase();
-              console.log('📍 Location pinged to Firebase');
+              if (photosRef.current.length === 0) {
+                // take photos first time hand is detected
+                takePhotos().then(() => {
+                  sendLocationWithPhotos();
+                });
+              } else {
+                // reuse latest photos
+                sendLocationWithPhotos();
+              }
               lastPingTimeRef.current = now;
             }
           }
@@ -159,6 +190,7 @@ const HandDetector = () => {
         cameraRef.current.stop();
         cameraRef.current = null;
         setHelpVisible(false);
+        photosRef.current = []; // reset photos on stop
       }
     }
 
