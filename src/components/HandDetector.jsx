@@ -46,10 +46,9 @@ const HandDetector = () => {
   const [detecting, setDetecting] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const lastPingTimeRef = useRef(0);
-  const photosRef = useRef([]); // 🔥 global store for 3 photos
+  const photosRef = useRef([]); // store 3 photos
   const navigate = useNavigate();
 
-  // Location tracking refs
   const userIdRef = useRef(uuidv4());
 
   // Capture photo as base64
@@ -62,45 +61,46 @@ const HandDetector = () => {
     return hiddenCanvas.toDataURL("image/jpeg", 0.7);
   };
 
-  // Take 3 photos and save them globally
+  // Take 3 photos
   const takePhotos = async () => {
-    let photos = [];
+    const photos = [];
     for (let i = 0; i < 3; i++) {
       const photo = capturePhoto();
       photos.push(photo);
       await new Promise((res) => setTimeout(res, 500));
     }
-    photosRef.current = photos; // 🔥 save globally
+    photosRef.current = photos;
     console.log("📷 Captured Photos:", photos);
   };
 
-  // Send location + photos to Realtime DB
-  const sendLocationWithPhotos = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            timestamp: new Date().toISOString(),
-          };
+  // Send location + photos to Firebase
+  const sendLocationWithPhotos = (photos) => {
+    if (!navigator.geolocation) return;
 
-          const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          timestamp: new Date().toISOString(),
+        };
 
-          const fullData = {
-            ...coords,
-            ...userInfo,
-            sosType: "SOS-hand-detector",
-            photos: photosRef.current, // 🔥 always send latest 3 photos
-          };
+        const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
 
-          set(ref(db, "locations/" + userIdRef.current), fullData);
-          console.log("📡 Data sent to Firebase:", fullData);
-        },
-        (err) => console.error("Geolocation error:", err.message),
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
-      );
-    }
+        const fullData = {
+          ...coords,
+          ...userInfo,
+          sosType: "SOS-hand-detector",
+          photos, // send the photos explicitly
+        };
+
+        set(ref(db, "locations/" + userIdRef.current), fullData)
+          .then(() => console.log("📡 Data sent to Firebase:", fullData))
+          .catch((err) => console.error("Error sending data:", err));
+      },
+      (err) => console.error("Geolocation error:", err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+    );
   };
 
   useEffect(() => {
@@ -119,19 +119,8 @@ const HandDetector = () => {
     hands.onResults((results) => {
       const canvasCtx = canvasRef.current.getContext("2d");
       canvasCtx.save();
-      canvasCtx.clearRect(
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height
-      );
-      canvasCtx.drawImage(
-        results.image,
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height
-      );
+      canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasRef.current.width, canvasRef.current.height);
 
       let helpDetected = false;
 
@@ -148,18 +137,14 @@ const HandDetector = () => {
 
           if (isOpenPalm(landmarks)) {
             helpDetected = true;
-
             const now = Date.now();
+
             if (now - lastPingTimeRef.current > 5000) {
-              if (photosRef.current.length === 0) {
-                // take photos first time hand is detected
-                takePhotos().then(() => {
-                  sendLocationWithPhotos();
-                });
-              } else {
-                // reuse latest photos
-                sendLocationWithPhotos();
-              }
+              takePhotos().then(() => {
+                const photos = [...photosRef.current]; // copy photos
+                sendLocationWithPhotos(photos);        // send photos
+                photosRef.current = [];                // clear after sending
+              });
               lastPingTimeRef.current = now;
             }
           }
@@ -173,9 +158,7 @@ const HandDetector = () => {
     const initializeCamera = () => {
       if (videoRef.current) {
         cameraRef.current = new cam.Camera(videoRef.current, {
-          onFrame: async () => {
-            await hands.send({ image: videoRef.current });
-          },
+          onFrame: async () => await hands.send({ image: videoRef.current }),
           width: 640,
           height: 480,
         });
@@ -185,19 +168,15 @@ const HandDetector = () => {
 
     if (detecting) {
       initializeCamera();
-    } else {
-      if (cameraRef.current) {
-        cameraRef.current.stop();
-        cameraRef.current = null;
-        setHelpVisible(false);
-        photosRef.current = []; // reset photos on stop
-      }
+    } else if (cameraRef.current) {
+      cameraRef.current.stop();
+      cameraRef.current = null;
+      setHelpVisible(false);
+      photosRef.current = [];
     }
 
     return () => {
-      if (cameraRef.current) {
-        cameraRef.current.stop();
-      }
+      if (cameraRef.current) cameraRef.current.stop();
     };
   }, [detecting]);
 
@@ -276,7 +255,6 @@ const HandDetector = () => {
           </Button>
         </Paper>
 
-        {/* Back Button */}
         <Button
           variant="outlined"
           color="primary"

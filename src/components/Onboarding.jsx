@@ -15,6 +15,8 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import EmergencyIcon from '@mui/icons-material/Warning';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -40,14 +42,22 @@ const Onboarding = () => {
   // Validate fields for the current step
   const validateStep = () => {
     let newErrors = {};
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Phone must be at least 10 digits, not start with 0
+    const phonePattern = /^[1-9][0-9]{9,14}$/;
+
     if (step === 1) {
       if (!form.name) newErrors.name = 'Name is required';
       if (!form.email) newErrors.email = 'Email is required';
+      else if (!emailPattern.test(form.email)) newErrors.email = 'Invalid email address';
       if (!form.contact) newErrors.contact = 'Phone is required';
+      else if (!phonePattern.test(form.contact.replace(/\D/g, ''))) newErrors.contact = 'Invalid phone number';
     }
     if (step === 2) {
       if (!form.emergency1) newErrors.emergency1 = 'Emergency Contact 1 is required';
+      else if (!phonePattern.test(form.emergency1.replace(/\D/g, ''))) newErrors.emergency1 = 'Invalid emergency contact number';
       if (!form.emergency2) newErrors.emergency2 = 'Emergency Contact 2 is required';
+      else if (!phonePattern.test(form.emergency2.replace(/\D/g, ''))) newErrors.emergency2 = 'Invalid emergency contact number';
       if (!form.address) newErrors.address = 'Address is required';
     }
     setErrors(newErrors);
@@ -192,18 +202,21 @@ const Onboarding = () => {
               error={!!errors.email}
               helperText={errors.email}
             />
-            <TextField
-              label="Phone"
-              name="contact"
-              fullWidth
-              value={form.contact}
-              onChange={handleChange}
-              margin="normal"
-              type="tel"
-              sx={textFieldStyles}
-              error={!!errors.contact}
-              helperText={errors.contact}
-            />
+            <Box mt={2} mb={1}>
+              <PhoneInput
+                country={'in'}
+                value={form.contact}
+                onChange={value => setForm({ ...form, contact: value })}
+                inputStyle={{ width: '100%', backgroundColor: 'rgba(151, 9, 9, 0.85)', color: form.contact ? '#fff' : '#eee', borderRadius: 6 }}
+                containerStyle={{ width: '100%' }}
+                buttonStyle={{ color: '#000' }}
+                dropdownStyle={{ color: '#000' }}
+                specialLabel="Phone"
+                placeholder="+91 9876543210"
+                isValid={!!form.contact && !errors.contact}
+              />
+              {errors.contact && <Typography color="error" variant="caption">{errors.contact}</Typography>}
+            </Box>
             <Grid container spacing={2} mt={2} justifyContent="flex-end">
               <Grid item>
                 <button
@@ -223,30 +236,32 @@ const Onboarding = () => {
             <Typography variant="h6" gutterBottom color="white">
               Emergency Info
             </Typography>
-            <TextField
-              label="Emergency Contact 1"
-              name="emergency1"
-              fullWidth
-              value={form.emergency1}
-              onChange={handleChange}
-              margin="normal"
-              type="tel"
-              sx={textFieldStyles}
-              error={!!errors.emergency1}
-              helperText={errors.emergency1}
-            />
-            <TextField
-              label="Emergency Contact 2"
-              name="emergency2"
-              fullWidth
-              value={form.emergency2}
-              onChange={handleChange}
-              margin="normal"
-              type="tel"
-              sx={textFieldStyles}
-              error={!!errors.emergency2}
-              helperText={errors.emergency2}
-            />
+            <Box mt={2} mb={1}>
+              <PhoneInput
+                country={'in'}
+                value={form.emergency1}
+                onChange={value => setForm({ ...form, emergency1: value })}
+                inputStyle={{ width: '100%', backgroundColor: 'rgba(151, 9, 9, 0.85)', color: '#fff', borderRadius: 6 }}
+                containerStyle={{ width: '100%' }}
+                buttonStyle={{ color: '#000' }}
+                dropdownStyle={{ color: '#000' }}
+                isValid={!!form.emergency1 && !errors.emergency1}
+              />
+              {errors.emergency1 && <Typography color="error" variant="caption">{errors.emergency1}</Typography>}
+            </Box>
+            <Box mt={2} mb={1}>
+              <PhoneInput
+                country={'in'}
+                value={form.emergency2}
+                onChange={value => setForm({ ...form, emergency2: value })}
+                inputStyle={{ width: '100%', backgroundColor: 'rgba(151, 9, 9, 0.85)', color: '#fff', borderRadius: 6 }}
+                containerStyle={{ width: '100%' }}
+                buttonStyle={{ color: '#000' }}
+                dropdownStyle={{ color: '#000' }}
+                isValid={!!form.emergency2 && !errors.emergency2}
+              />
+              {errors.emergency2 && <Typography color="error" variant="caption">{errors.emergency2}</Typography>}
+            </Box>
             <TextField
               label="Address"
               name="address"
@@ -341,6 +356,19 @@ const Onboarding = () => {
           ⬅ Back
         </Button>
       )}
+      <style>{`
+.react-tel-input .special-label {
+  position: absolute;
+  z-index: 1;
+  top: -7px;
+  left: 25px;
+  display: block;
+  background: #dd4040;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0 5px;
+}
+`}</style>
     </Box>
   );
 };
